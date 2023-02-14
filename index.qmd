@@ -1,11 +1,11 @@
 ---
 title: "Homework 2"
-author: "[Insert your name here]{style='background-color: yellow;'}"
+author: "Jack Benadon {style='background-color: yellow;'}"
 toc: true
 title-block-banner: true
 title-block-style: default
-format: html
-# format: pdf
+#format: html
+format: pdf
 ---
 
 [Link to the Github repository](https://github.com/psu-stat380/hw-2)
@@ -28,7 +28,7 @@ For this assignment, we will be using the [Abalone dataset](http://archive.ics.u
 
 We will be using the following libraries:
 
-```R
+```{R}
 library(readr)
 library(tidyr)
 library(ggplot2)
@@ -51,7 +51,7 @@ EDA using `readr`, `tidyr` and `ggplot2`
 
 Load the "Abalone" dataset as a tibble called `abalone` using the URL provided below. The `abalone_col_names` variable contains a vector of the column names for this dataset (to be consistent with the R naming pattern). Make sure you read the dataset with the provided column names. 
 
-```R
+```{R}
 library(readr)
 url <- "http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data"
 
@@ -67,7 +67,8 @@ abalone_col_names <- c(
   "rings"
 )
 
-abalone <- ... # Insert your code here
+abalone <- read_csv(url) # Insert your code here
+colnames(abalone) <- abalone_col_names
 ```
 
 ---
@@ -76,9 +77,10 @@ abalone <- ... # Insert your code here
 
 Remove missing values and `NA`s from the dataset and store the cleaned data in a tibble called `df`. How many rows were dropped?
 
-```R
-df <- ... # Insert your code here
+```{R}
+df <- na.omit(abalone)
 ```
+no rows were dropped
 
 
 
@@ -89,8 +91,14 @@ df <- ... # Insert your code here
 
 Plot histograms of all the quantitative variables in a **single plot** [^footnote_facet_wrap]
 
-```R
-... # Insert your code here
+```{R}
+#gather(df, 'length','diameter','height', 'whole_weight','shucked_weight','viscera_weight','shell_weight','rings', -sex)
+
+ggplot(df) +
+  aes(x = length) +
+  geom_histogram( fill = "#112446") +
+  theme_minimal() + 
+  facet_wrap(vars(diameter), nrow=4)
 ```
 
 
@@ -100,12 +108,18 @@ Plot histograms of all the quantitative variables in a **single plot** [^footnot
 
 Create a boxplot of `length` for each `sex` and create a violin-plot of of `diameter` for each `sex`. Are there any notable differences in the physical appearences of abalones based on your analysis here?
 
-```R
-... # Insert your code for boxplot here
+```{R}
+ggplot(df) +
+  aes(y = length, x = sex) +
+  geom_boxplot(fill = "#112446") +
+  theme_minimal() # Insert your code for boxplot here
 ```
 
-```R
-... # Insert your code for violinplot here
+```{R}
+ggplot(df) +
+  aes(x = sex, y = diameter) +
+  geom_violin(adjust = 1L, scale = "area", fill = "#112446") +
+  theme_minimal() # Insert your code for violinplot here
 ```
 
 
@@ -117,8 +131,17 @@ Create a scatter plot of `length` and `diameter`, and modify the shape and color
 
 
 
-```R
-... # Insert your code here
+```{R}
+ggplot(df) +
+  aes(
+    x = length,
+    y = diameter,
+    colour = sex,
+    size = shell_weight
+  ) +
+  geom_point(shape = "circle") +
+  scale_color_hue(direction = 1) +
+  theme_minimal() # Insert your code here
 ```
 
 ---
@@ -128,8 +151,13 @@ Create a scatter plot of `length` and `diameter`, and modify the shape and color
 For each `sex`, create separate scatter plots of `length` and `diameter`. For each plot, also add a **linear** trendline to illustrate the relationship between the variables. Use the `facet_wrap()` function in R for this, and ensure that the plots are vertically stacked **not** horizontally. You should end up with a plot that looks like this: [^footnote_plot_facet]
 
 
-```R
-... # Insert your code here
+```{R}
+ggplot(df) +
+  aes(x = length, y = diameter) +
+  geom_point(shape = "circle", size = 1.5, colour = "#112446") +
+  theme_bw() +
+  facet_wrap(vars(sex)) +
+  # Insert your code here
 ```
 
 
