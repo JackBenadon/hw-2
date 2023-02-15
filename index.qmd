@@ -92,13 +92,16 @@ no rows were dropped
 Plot histograms of all the quantitative variables in a **single plot** [^footnote_facet_wrap]
 
 ```{R}
-#gather(df, 'length','diameter','height', 'whole_weight','shucked_weight','viscera_weight','shell_weight','rings', -sex)
+dataframe <- df %>%
+  pivot_longer(!sex,
+               names_to = "variables",
+               values_to = "values")
 
-ggplot(df) +
-  aes(x = length) +
-  geom_histogram( fill = "#112446") +
-  theme_minimal() + 
-  facet_wrap(vars(diameter), nrow=4)
+plot <- ggplot(dataframe, aes(x = values)) +
+  geom_histogram() + 
+  facet_wrap(~variables, scales = "free")
+
+plot
 ```
 
 
@@ -121,7 +124,7 @@ ggplot(df) +
   geom_violin(adjust = 1L, scale = "area", fill = "#112446") +
   theme_minimal() # Insert your code for violinplot here
 ```
-
+The abalones with `sex = 'F'` tend to be very slightly larger on average than those that have `sex = 'M'` in terms of both diameter and length. However, they are both significantly larger than those with `sex = 'I'`.
 
 ---
 
@@ -143,7 +146,8 @@ ggplot(df) +
   scale_color_hue(direction = 1) +
   theme_minimal() # Insert your code here
 ```
-
+There is one notable anomaly in the dataset there is a abalone that has a far larger diameter than the others from its sex and it is not as long as you would expect an abalone to be with a diameter that size.
+ 
 ---
 
 ###### 1.6 (5 points)
@@ -153,10 +157,11 @@ For each `sex`, create separate scatter plots of `length` and `diameter`. For ea
 
 ```{R}
 ggplot(df) +
-  aes(x = length, y = diameter) +
-  geom_point(shape = "circle", size = 1.5, colour = "#112446") +
+  aes(x = length, y = diameter, color = sex) +
+  geom_point(shape = "circle", size = 1.5) +
   theme_bw() +
-  facet_wrap(vars(sex)) +
+  facet_wrap(vars(sex), nrow = 3)+
+   geom_smooth(method = "lm", se = FALSE, color = "violet")
   # Insert your code here
 ```
 
@@ -182,8 +187,19 @@ More advanced analyses using `dplyr`, `purrrr` and `ggplot2`
 Filter the data to only include abalone with a length of at least $0.5$ meters. Group the data by `sex` and calculate the mean of each variable for each group. Create a bar plot to visualize the mean values for each variable by `sex`.
 
 
-```R
-df %>% ... # Insert your code here
+```{R}
+filter_data <- df %>%
+  group_by(sex) %>%
+  summarize(across(everything(),mean)) %>%
+  filter('length' >= 0.5) %>%
+  
+  pivot_longer(!sex, 
+               names_to = "variables",
+               values_to = "mean")
+
+ggplot(filter_data, aes(x= mean, y = variables)) +
+  geom_bar(stat = "identity", aes(fill = sex)) +
+  facet_wrap(vars(sex),nrow=3)
 ```
 
 
@@ -204,8 +220,17 @@ Implement the following in a **single command**:
 3. Use the `geom_tile()` function to create a tile plot of `num_rings` vs `sex` with the color indicating of each tile indicating the `avg_weight` value. 
 
 
-```R
-df %>% ... # Insert your code here
+```{R}
+num_rings <- df %>%  
+  mutate(num_rings = ifelse(rings < 10, "low", ifelse(rings > 20, "high", "med"))) %>%
+  group_by(num_rings, sex) %>%
+  summarise(avg_weight = mean(whole_weight + shucked_weight + viscera_weight + shell_weight)) %>%
+  ggplot(aes(x = sex, y = num_rings, fill = avg_weight)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(title = "Average weight by sex and number of rings")
+
+num_rings
 ```
 
 
@@ -217,8 +242,10 @@ df %>% ... # Insert your code here
 Make a table of the pairwise correlations between all the numeric variables rounded to 2 decimal points. Your final answer should look like this [^footnote_table]
 
 
-```R
-df %>% ... # Insert your code here
+```{R}
+df_numeric <- df %>% select_if(is.numeric) # Select only the numeric variables
+cor_table <- round(cor(df_numeric), 2)
+cor_table
 ```
 
 
@@ -234,8 +261,14 @@ Use the `map2()` function from the `purrr` package to create a scatter plot for 
 :::
 
 
-```R
-... # Insert your code here
+```{R}
+quant_vars <- c("length", "diameter", "height", "whole_weight", 
+                "shucked_weight", "viscera_weight", "shell_weight", "rings")
+
+scatter_plots <- 
+  map2(quant_vars, quant_vars, ~ ggplot(df, aes_string(x = "rings", y = .x, color = "sex")) + geom_point() + labs(x = "Number of Rings", y = .x))
+
+plot_grid(plotlist = scatter_plots, ncol = 3)
 ```
 
 
@@ -258,10 +291,11 @@ Linear regression using `lm`
 Perform a simple linear regression with `diameter` as the covariate and `height` as the response. Interpret the model coefficients and their significance values. 
 
 
-```R
-... # Insert your code here
+```{R}
+model <- lm( df$height ~ df$diameter)
+model
 ```
-
+This means that for every one unit change in diameter we expect height to change by 1.9783.
 
 
 ---
@@ -271,9 +305,12 @@ Perform a simple linear regression with `diameter` as the covariate and `height`
 Make a scatterplot of `height` vs `diameter` and plot the regression line in `color="red"`. You can use the base `plot()` function in R for this. Is the linear model an appropriate fit for this relationship? Explain. 
 
 
-```R
-... # Insert your code here
+```{R}
+plot(df$diameter, df$height, xlab = "Diameter", ylab = "Height")
+
+abline(lm(df$height ~ df$diameter), col = "red")
 ```
+Yes it is an apropriate fit because the data is linear. (except for some outliers)
 
 
 
@@ -283,7 +320,7 @@ Make a scatterplot of `height` vs `diameter` and plot the regression line in `co
 
 Suppose we have collected observations for "new" abalones with `new_diameter` values given below. What is the expected value of their `height` based on your model above? Plot these new observations along with your predictions in your plot from earlier using `color="violet"`
 
-```R
+```{R}
 
 new_diameters <- c(
   0.15218946,
@@ -298,8 +335,12 @@ new_diameters <- c(
   0.01209518
 )
 
+new_df <- data.frame(new_diameters)
+  height <- predict(model, new_df = new_df)
+  plot(df$diameter, df$height)
+  abline(model, col="red")
+  points(x=new_diameters, y=height, pch = 19, col='violet')
 
-... # Insert your code here. 
 ```
 
 
